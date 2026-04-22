@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Prompt Playground</title>
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Google Fonts: Syne for headings, DM Mono for code-y feel -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ===== TOAST NOTIFICATION (appears when something is copied) ===== -->
+  <div id="toast" class="toast" aria-live="polite">
+    <i class="fa-solid fa-check"></i>
+    <span id="toast-msg">Copied!</span>
+  </div>
+
+  <!-- ===== TOP NAVBAR ===== -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">Prompt<span class="brand-accent">Lab</span></span>
+    </div>
+
+    <nav class="nav-actions">
+      <!-- Templates dropdown trigger -->
+      <div class="dropdown-wrap" id="templates-wrap">
+        <button class="btn btn-ghost" id="templates-btn" aria-haspopup="true">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Templates</span>
+          <i class="fa-solid fa-chevron-down chevron"></i>
+        </button>
+        <ul class="dropdown-menu" id="templates-menu" role="menu" aria-label="Prompt templates">
+          <!-- Filled dynamically by JS -->
+        </ul>
+      </div>
+
+      <!-- Import / Export -->
+      <button class="btn btn-ghost" id="export-btn" title="Export prompts as JSON">
+        <i class="fa-solid fa-file-export"></i>
+        <span>Export</span>
+      </button>
+      <label class="btn btn-ghost" id="import-label" title="Import prompts from JSON" tabindex="0">
+        <i class="fa-solid fa-file-import"></i>
+        <span>Import</span>
+        <input type="file" id="import-file" accept=".json" hidden />
+      </label>
+
+      <!-- Dark / light toggle -->
+      <button class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode" aria-label="Toggle theme">
+        <span class="toggle-icon" id="toggle-icon">☀️</span>
+      </button>
+
+      <!-- Add new prompt -->
+      <button class="btn btn-primary" id="add-prompt-btn">
+        <i class="fa-solid fa-plus"></i>
+        <span>New Prompt</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ===== HERO BAR (search + filters + stats) ===== -->
+  <section class="hero-bar">
+    <div class="hero-inner">
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input
+          type="text"
+          id="search-input"
+          class="search-input"
+          placeholder="Search titles, content, tags…"
+          autocomplete="off"
+          aria-label="Search prompts"
+        />
+        <button class="search-clear" id="search-clear" title="Clear search" aria-label="Clear search">✕</button>
+      </div>
+
+      <div class="filter-row">
+        <select id="category-filter" class="filter-select" aria-label="Filter by category">
+          <option value="All">All Categories</option>
+          <option value="Coding">Coding</option>
+          <option value="Writing">Writing</option>
+          <option value="Brainstorming">Brainstorming</option>
+          <option value="Debugging">Debugging</option>
+          <option value="Image Generation">Image Generation</option>
+        </select>
+
+        <!-- Active tag filter pill (shown when a tag is clicked) -->
+        <div id="tag-filter-wrap" class="tag-filter-wrap hidden">
+          <span>Tag:</span>
+          <span class="tag-pill active-tag" id="active-tag-label"></span>
+          <button class="clear-tag-btn" id="clear-tag-btn" title="Clear tag filter">✕</button>
+        </div>
+
+        <span class="result-count" id="result-count">0 prompts</span>
+
+        <!-- Random prompt button -->
+        <button class="btn btn-accent" id="random-btn" title="Show a random prompt">
+          <i class="fa-solid fa-dice"></i>
+          <span>Random</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MAIN CONTENT AREA ===== -->
+  <main class="main-content" id="main-content">
+    <!-- Prompt cards are injected here by JS -->
+    <div id="cards-grid" class="cards-grid"></div>
+
+    <!-- Empty state when no prompts exist yet -->
+    <div id="empty-state" class="empty-state hidden">
+      <div class="empty-icon">🧪</div>
+      <h2>No prompts yet.</h2>
+      <p>Add your first AI prompt or load a template to get started!</p>
+      <button class="btn btn-primary" id="empty-add-btn">
+        <i class="fa-solid fa-plus"></i> Add Prompt
+      </button>
+    </div>
+
+    <!-- Empty search results state -->
+    <div id="no-results" class="empty-state hidden">
+      <div class="empty-icon">🔍</div>
+      <h2>No results found.</h2>
+      <p>Try a different search term, category, or tag.</p>
+    </div>
+  </main>
+
+  <!-- ===================================================
+       MODAL: Add / Edit Prompt
+  ==================================================== -->
+  <div id="prompt-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-title">New Prompt</h2>
+        <button class="modal-close" id="modal-close" aria-label="Close modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="prompt-form" novalidate>
+        <!-- Hidden ID field used during editing -->
+        <input type="hidden" id="edit-id" />
+
+        <div class="form-group">
+          <label for="p-title">Title <span class="req">*</span></label>
+          <input type="text" id="p-title" placeholder="E.g. Explain Like I'm 5" maxlength="100" required />
+          <span class="field-hint" id="title-err"></span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="p-category">Category <span class="req">*</span></label>
+            <select id="p-category" required>
+              <option value="">-- Select --</option>
+              <option value="Coding">Coding</option>
+              <option value="Writing">Writing</option>
+              <option value="Brainstorming">Brainstorming</option>
+              <option value="Debugging">Debugging</option>
+              <option value="Image Generation">Image Generation</option>
+            </select>
+            <span class="field-hint" id="cat-err"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="p-tags">Tags <span class="hint">(comma-separated)</span></label>
+            <input type="text" id="p-tags" placeholder="e.g. beginners, creative, fun" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="p-content">Prompt Content <span class="req">*</span></label>
+          <textarea id="p-content" rows="7" placeholder="Write your AI prompt here…" required></textarea>
+          <span class="field-hint" id="content-err"></span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="form-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="form-submit">
+            <i class="fa-solid fa-floppy-disk"></i> Save Prompt
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: Random Prompt Viewer
+  ==================================================== -->
+  <div id="random-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="random-title">
+    <div class="modal-box random-modal-box">
+      <div class="modal-header">
+        <h2 id="random-title">🎲 Random Prompt</h2>
+        <button class="modal-close" id="random-modal-close" aria-label="Close random prompt modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="random-body">
+        <div class="random-meta">
+          <span class="category-badge" id="rand-category"></span>
+          <div class="tag-list" id="rand-tags"></div>
+        </div>
+        <h3 id="rand-title-text" class="random-prompt-title"></h3>
+        <div class="random-content-box">
+          <pre id="rand-content" class="random-prompt-text"></pre>
+        </div>
+        <p class="random-date" id="rand-date"></p>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="random-another-btn">
+          <i class="fa-solid fa-dice"></i> Another One
+        </button>
+        <button class="btn btn-accent" id="random-copy-btn">
+          <i class="fa-regular fa-clipboard"></i> Copy Prompt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: Confirm Delete
+  ==================================================== -->
+  <div id="delete-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+    <div class="modal-box modal-box--sm">
+      <div class="modal-header">
+        <h2 id="delete-title">Delete Prompt?</h2>
+      </div>
+      <div class="delete-body">
+        <i class="fa-solid fa-triangle-exclamation delete-warn-icon"></i>
+        <p>This will permanently remove <strong id="delete-prompt-name"></strong>. Are you sure?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="delete-cancel">Cancel</button>
+        <button class="btn btn-danger" id="delete-confirm">
+          <i class="fa-solid fa-trash"></i> Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODAL: Import Confirm (for duplicate handling)
+  ==================================================== -->
+  <div id="import-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="import-title">
+    <div class="modal-box modal-box--sm">
+      <div class="modal-header">
+        <h2 id="import-title">Import Prompts</h2>
+      </div>
+      <div class="delete-body" id="import-modal-body">
+        <!-- filled by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="import-cancel">Cancel</button>
+        <button class="btn btn-primary" id="import-merge">
+          <i class="fa-solid fa-code-merge"></i> Merge All
+        </button>
+        <button class="btn btn-accent" id="import-replace">
+          <i class="fa-solid fa-arrows-rotate"></i> Replace All
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
