@@ -6,7 +6,7 @@ const state = {
   tagFilter: '',        // tag the user clicked on, if any
   editingId: null,      // the ID of the prompt being edited (null = new)
   deleteTargetId: null, // the ID of the prompt staged for deletion
-  pendingImport: null,  // the parsed JSON waiting for user to confirm import
+  pendingImport: null,  // the parsed JSON
 };
 
 
