@@ -85,24 +85,6 @@ Your preference is saved to `localStorage` and remembered on your next visit.
 
 ---
 
-## 🖥️ Screenshots
-
-> The app opens in dark mode by default with three example prompts pre-loaded.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ⚡ PromptLab    [Templates ▾] [Export] [Import] [☀️] [+ New] │
-├─────────────────────────────────────────────────────────────┤
-│  🔍 Search titles, content, tags…                           │
-│  [All Categories ▾]                          3 prompts  🎲  │
-├──────────────────┬──────────────────┬────────────────────── ┤
-│ Summarize Like   │ Refactor This    │ Cinematic Fantasy     │
-│ a Pro            │ Code             │ Scene                 │
-│ [Writing] #begin │ [Coding] #tech   │ [Image Gen] #creative │
-│ Please summarize │ Refactor the fol │ A breathtaking fanta… │
-│ Mar 20, 2025  📋✏🗑│ Mar 21, 2025  📋✏🗑│ Mar 22, 2025  📋✏🗑  │
-└──────────────────┴──────────────────┴──────────────────────-┘
-```
 
 ---
 
